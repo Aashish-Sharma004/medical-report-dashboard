@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinical Note Intelligence Dashboard</title>
+    <style>
+        :root {
+            --bg: #f4efe4;
+            --bg-accent: #e8ddd0;
+            --panel: rgba(255, 251, 245, 0.82);
+            --panel-strong: #fffaf2;
+            --line: rgba(79, 57, 39, 0.12);
+            --text: #2a1b12;
+            --muted: #6e5a4d;
+            --brand: #0f766e;
+            --brand-strong: #0b5d57;
+            --alert: #c2410c;
+            --warm: #9a3412;
+            --shadow: 0 24px 70px rgba(76, 52, 30, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            color: var(--text);
+            background:
+                radial-gradient(circle at top left, rgba(15, 118, 110, 0.12), transparent 32%),
+                radial-gradient(circle at right center, rgba(194, 65, 12, 0.12), transparent 28%),
+                linear-gradient(180deg, #f7f1e8 0%, #f4efe4 50%, #efe6d6 100%);
+            font-family: "Aptos", "Trebuchet MS", sans-serif;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background-image:
+                linear-gradient(rgba(15, 118, 110, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(15, 118, 110, 0.04) 1px, transparent 1px);
+            background-size: 44px 44px;
+            mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.5), transparent);
+        }
+
+        .page-shell {
+            width: min(1320px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 24px 0 48px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.75fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .hero-card,
+        .panel {
+            border: 1px solid var(--line);
+            border-radius: 28px;
+            background: var(--panel);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(18px);
+        }
+
+        .hero-card {
+            padding: 28px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-card::after {
+            content: "";
+            position: absolute;
+            right: -60px;
+            bottom: -80px;
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(15, 118, 110, 0.18), transparent 68%);
+        }
+
+        .eyebrow {
+            font-size: 0.75rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--brand);
+            margin-bottom: 10px;
+        }
+
+        h1 {
+            margin: 0;
+            font-family: "Rockwell", "Book Antiqua", serif;
+            font-size: clamp(2rem, 4vw, 3.8rem);
+            line-height: 0.94;
+            max-width: 780px;
+        }
+
+        .hero-copy {
+            max-width: 720px;
+            margin: 14px 0 0;
+            color: var(--muted);
+            font-size: 1rem;
+            line-height: 1.7;
+        }
+
+        .hero-side {
+            padding: 22px;
+            display: grid;
+            gap: 14px;
+            align-content: start;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            width: fit-content;
+            padding: 9px 14px;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            background: rgba(15, 118, 110, 0.1);
+            color: var(--brand-strong);
+        }
+
+        .status-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .quick-meta {
+            display: grid;
+            gap: 12px;
+        }
+
+        .quick-meta .meta-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--line);
+            color: var(--muted);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 380px minmax(0, 1fr);
+            gap: 20px;
+            align-items: start;
+        }
+
+        .stack {
+            display: grid;
+            gap: 20px;
+        }
+
+        .panel {
+            padding: 22px;
+        }
+
+        .section-kicker {
+            color: var(--brand);
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            font-size: 0.74rem;
+            margin-bottom: 10px;
+        }
+
+        .section-title {
+            margin: 0;
+            font-family: "Rockwell", "Book Antiqua", serif;
+            font-size: 1.55rem;
+        }
+
+        .section-copy {
+            margin: 10px 0 0;
+            color: var(--muted);
+            line-height: 1.65;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            padding: 16px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.45);
+            border: 1px solid rgba(79, 57, 39, 0.09);
+        }
+
+        .metric-label {
+            font-size: 0.74rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .metric-value {
+            margin-top: 10px;
+            font-size: clamp(1.55rem, 2vw, 2rem);
+            font-weight: 800;
+        }
+
+        .metric-detail {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 0.92rem;
+            line-height: 1.5;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 14px;
+            font-size: 0.9rem;
+            color: var(--muted);
+        }
+
+        .field-label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text);
+            font-weight: 700;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            border: 1px solid rgba(79, 57, 39, 0.14);
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.9);
+            color: var(--text);
+            padding: 14px 16px;
+            font: inherit;
+            outline: none;
+            transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+        }
+
+        input:focus,
+        textarea:focus {
+            border-color: rgba(15, 118, 110, 0.45);
+            box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.08);
+            transform: translateY(-1px);
+        }
+
+        textarea {
+            min-height: 180px;
+            resize: vertical;
+        }
+
+        .file-shell {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 16px;
+            border-radius: 16px;
+            border: 1px dashed rgba(15, 118, 110, 0.28);
+            background: rgba(15, 118, 110, 0.04);
+            color: var(--muted);
+        }
+
+        .button-row,
+        .pill-row,
+        .detail-grid,
+        .note-list,
+        .patient-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .button-row {
+            margin-top: 16px;
+        }
+
+        button,
+        .ghost-button {
+            appearance: none;
+            border: none;
+            border-radius: 999px;
+            padding: 12px 18px;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+        }
+
+        button:hover,
+        .ghost-button:hover {
+            transform: translateY(-1px);
+        }
+
+        .primary-button {
+            background: linear-gradient(135deg, var(--brand-strong), var(--brand));
+            color: white;
+            box-shadow: 0 16px 30px rgba(15, 118, 110, 0.24);
+        }
+
+        .secondary-button {
+            background: rgba(15, 118, 110, 0.08);
+            color: var(--brand-strong);
+        }
+
+        .pill {
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: rgba(15, 118, 110, 0.08);
+            color: var(--brand-strong);
+            font-size: 0.88rem;
+            font-weight: 700;
+        }
+
+        .pill.alert {
+            background: rgba(194, 65, 12, 0.12);
+            color: var(--alert);
+        }
+
+        .status-banner {
+            margin-top: 16px;
+            padding: 14px 16px;
+            border-radius: 16px;
+            border: 1px solid rgba(15, 118, 110, 0.18);
+            background: rgba(15, 118, 110, 0.06);
+            color: var(--brand-strong);
+        }
+
+        .status-banner.error {
+            border-color: rgba(194, 65, 12, 0.2);
+            background: rgba(194, 65, 12, 0.08);
+            color: var(--alert);
+        }
+
+        .patient-card,
+        .note-card,
+        .detail-card {
+            padding: 16px;
+            border-radius: 18px;
+            border: 1px solid rgba(79, 57, 39, 0.09);
+            background: rgba(255, 255, 255, 0.48);
+        }
+
+        .patient-card {
+            width: 100%;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .patient-card.active {
+            border-color: rgba(15, 118, 110, 0.42);
+            background: rgba(15, 118, 110, 0.08);
+        }
+
+        .patient-heading,
+        .note-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            gap: 14px;
+            margin-bottom: 8px;
+        }
+
+        .mono {
+            font-family: "Consolas", "Courier New", monospace;
+            letter-spacing: 0.04em;
+        }
+
+        .muted {
+            color: var(--muted);
+        }
+
+        .two-up {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .chart-shell {
+            height: 320px;
+            margin-top: 16px;
+        }
+
+        canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        .detail-grid {
+            margin-top: 16px;
+        }
+
+        .detail-card {
+            flex: 1 1 210px;
+        }
+
+        .detail-card h4 {
+            margin: 0 0 10px;
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+        }
+
+        .detail-card ul {
+            margin: 0;
+            padding-left: 18px;
+            color: var(--text);
+        }
+
+        .note-list,
+        .patient-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .empty-state {
+            margin-top: 16px;
+            padding: 18px;
+            border-radius: 18px;
+            border: 1px dashed rgba(79, 57, 39, 0.18);
+            color: var(--muted);
+            text-align: center;
+        }
+
+        .loading {
+            color: var(--muted);
+            font-style: italic;
+        }
+
+        @media (max-width: 1080px) {
+            .hero,
+            .grid,
+            .two-up,
+            .metric-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 720px) {
+            .page-shell {
+                width: min(100%, calc(100% - 18px));
+                padding: 12px 0 28px;
+            }
+
+            .hero-card,
+            .panel,
+            .hero-side {
+                padding: 18px;
+            }
+
+            h1 {
+                font-size: 2.15rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script>
+        window.APP_CONFIG = {{ app_config | tojson }};
+    </script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <script type="text/babel">
+        {% raw %}
+        const { useEffect, useMemo, useRef, useState } = React;
+
+        function formatDate(value) {
+            if (!value) {
+                return "N/A";
+            }
+            return new Date(value).toLocaleString();
+        }
+
+        function buildAuthHeaders(token, hasJsonBody = false) {
+            const headers = {};
+            if (token) {
+                headers.Authorization = `Bearer ${token}`;
+            }
+            if (hasJsonBody) {
+                headers["Content-Type"] = "application/json";
+            }
+            return headers;
+        }
+
+        function MetricChart({ title, type = "line", labels = [], datasets = [] }) {
+            const canvasRef = useRef(null);
+            const chartRef = useRef(null);
+
+            useEffect(() => {
+                if (!canvasRef.current) {
+                    return undefined;
+                }
+                if (chartRef.current) {
+                    chartRef.current.destroy();
+                }
+                chartRef.current = new Chart(canvasRef.current, {
+                    type,
+                    data: { labels, datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: "index",
+                            intersect: false,
+                        },
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: "#2a1b12",
+                                    font: { family: "Aptos, Trebuchet MS, sans-serif" },
+                                },
+                            },
+                            tooltip: {
+                                backgroundColor: "rgba(42, 27, 18, 0.92)",
+                                titleFont: { family: "Aptos, Trebuchet MS, sans-serif" },
+                                bodyFont: { family: "Aptos, Trebuchet MS, sans-serif" },
+                            },
+                        },
+                        scales: type === "bar" ? {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { color: "#6e5a4d" },
+                                grid: { color: "rgba(79, 57, 39, 0.08)" },
+                            },
+                            x: {
+                                ticks: { color: "#6e5a4d" },
+                                grid: { display: false },
+                            },
+                        } : {
+                            y: {
+                                ticks: { color: "#6e5a4d" },
+                                grid: { color: "rgba(79, 57, 39, 0.08)" },
+                            },
+                            x: {
+                                ticks: { color: "#6e5a4d" },
+                                grid: { display: false },
+                            },
+                        },
+                    },
+                });
+                return () => {
+                    if (chartRef.current) {
+                        chartRef.current.destroy();
+                    }
+                };
+            }, [type, labels, datasets]);
+
+            return (
+                <div className="panel">
+                    <div className="section-kicker">Chart</div>
+                    <h3 className="section-title">{title}</h3>
+                    <div className="chart-shell">
+                        <canvas ref={canvasRef}></canvas>
+                    </div>
+                </div>
+            );
+        }
+
+        function App() {
+            const [dashboard, setDashboard] = useState(null);
+            const [timeline, setTimeline] = useState(null);
+            const [selectedPatientId, setSelectedPatientId] = useState("");
+            const [loadingDashboard, setLoadingDashboard] = useState(true);
+            const [loadingTimeline, setLoadingTimeline] = useState(false);
+            const [statusMessage, setStatusMessage] = useState("");
+            const [statusError, setStatusError] = useState(false);
+            const [fileName, setFileName] = useState("");
+            const [fileBlob, setFileBlob] = useState(null);
+            const [form, setForm] = useState({
+                patient_id: "PT-3201",
+                encountered_at: new Date().toISOString().slice(0, 10),
+                note_text: "",
+                api_token: "",
+            });
+
+            async function loadDashboard(preferredPatientId = "") {
+                setLoadingDashboard(true);
+                try {
+                    const response = await fetch("/api/dashboard");
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.error || "Unable to load dashboard data.");
+                    }
+                    setDashboard(data);
+                    const nextPatientId = preferredPatientId || selectedPatientId || data.default_patient_id || "";
+                    if (nextPatientId) {
+                        setSelectedPatientId(nextPatientId);
+                    }
+                } catch (error) {
+                    setStatusError(true);
+                    setStatusMessage(error.message);
+                } finally {
+                    setLoadingDashboard(false);
+                }
+            }
+
+            async function loadTimeline(patientId) {
+                if (!patientId) {
+                    setTimeline(null);
+                    return;
+                }
+                setLoadingTimeline(true);
+                try {
+                    const response = await fetch(`/api/patients/${encodeURIComponent(patientId)}/timeline`);
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.error || "Unable to load patient timeline.");
+                    }
+                    setTimeline(data);
+                } catch (error) {
+                    setStatusError(true);
+                    setStatusMessage(error.message);
+                } finally {
+                    setLoadingTimeline(false);
+                }
+            }
+
+            useEffect(() => {
+                loadDashboard();
+            }, []);
+
+            useEffect(() => {
+                if (selectedPatientId) {
+                    loadTimeline(selectedPatientId);
+                    setForm((current) => ({
+                        ...current,
+                        patient_id: selectedPatientId,
+                    }));
+                }
+            }, [selectedPatientId]);
+
+            async function handleSubmit(event) {
+                event.preventDefault();
+                setStatusError(false);
+                setStatusMessage("Processing clinical note...");
+
+                const requestOptions = {
+                    method: "POST",
+                    headers: buildAuthHeaders(form.api_token),
+                };
+
+                if (fileBlob) {
+                    const body = new FormData();
+                    body.append("patient_id", form.patient_id);
+                    body.append("encountered_at", form.encountered_at);
+                    body.append("note_file", fileBlob);
+                    if (form.note_text.trim()) {
+                        body.append("note_text", form.note_text);
+                    }
+                    requestOptions.body = body;
+                } else {
+                    requestOptions.headers = buildAuthHeaders(form.api_token, true);
+                    requestOptions.body = JSON.stringify({
+                        patient_id: form.patient_id,
+                        encountered_at: form.encountered_at,
+                        note_text: form.note_text,
+                    });
+                }
+
+                try {
+                    const response = await fetch("/api/notes", requestOptions);
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.error || "Unable to store note.");
+                    }
+                    setTimeline(data.timeline);
+                    setSelectedPatientId(data.note.patient_id);
+                    await loadDashboard(data.note.patient_id);
+                    setForm((current) => ({
+                        ...current,
+                        patient_id: data.note.patient_id,
+                        note_text: "",
+                    }));
+                    setFileBlob(null);
+                    setFileName("");
+                    setStatusMessage("Clinical note summarized and stored successfully.");
+                } catch (error) {
+                    setStatusError(true);
+                    setStatusMessage(error.message);
+                }
+            }
+
+            const topDiagnoses = dashboard?.overview?.top_diagnoses || [];
+            const latestPatient = timeline?.patient;
+            const latestNote = timeline?.notes?.[0];
+            const bpHrDatasets = useMemo(() => ([
+                {
+                    label: "Systolic BP",
+                    data: timeline?.trends?.blood_pressure_systolic || [],
+                    borderColor: "#0f766e",
+                    backgroundColor: "rgba(15, 118, 110, 0.14)",
+                    tension: 0.35,
+                },
+                {
+                    label: "Diastolic BP",
+                    data: timeline?.trends?.blood_pressure_diastolic || [],
+                    borderColor: "#9a3412",
+                    backgroundColor: "rgba(154, 52, 18, 0.12)",
+                    tension: 0.35,
+                },
+                {
+                    label: "Heart Rate",
+                    data: timeline?.trends?.heart_rate || [],
+                    borderColor: "#1d4ed8",
+                    backgroundColor: "rgba(29, 78, 216, 0.12)",
+                    tension: 0.35,
+                },
+            ]), [timeline]);
+
+            const symptomDatasets = useMemo(() => ([
+                {
+                    label: "Symptom Mentions",
+                    data: (timeline?.symptom_frequency || []).map((item) => item.count),
+                    backgroundColor: [
+                        "rgba(15, 118, 110, 0.72)",
+                        "rgba(154, 52, 18, 0.72)",
+                        "rgba(29, 78, 216, 0.72)",
+                        "rgba(202, 138, 4, 0.72)",
+                        "rgba(190, 24, 93, 0.72)",
+                        "rgba(79, 70, 229, 0.72)",
+                    ],
+                    borderRadius: 12,
+                },
+            ]), [timeline]);
+
+            return (
+                <div className="page-shell">
+                    <section className="hero">
+                        <div className="hero-card">
+                            <div className="eyebrow">Medical Record Summarizer & Trend Analyzer</div>
+                            <h1>Turn dense clinical notes into a usable patient intelligence dashboard.</h1>
+                            <p className="hero-copy">
+                                Upload a discharge summary or paste a progress note, extract a structured clinical snapshot,
+                                and track how vitals, symptoms, medications, and follow-up plans evolve over time.
+                            </p>
+                        </div>
+                        <div className="hero-card hero-side">
+                            <div className="status-pill">
+                                <span className="status-dot"></span>
+                                {dashboard?.overview?.llm_mode || "Loading mode"}
+                            </div>
+                            <div className="quick-meta">
+                                <div className="meta-row">
+                                    <span>Security</span>
+                                    <strong>{window.APP_CONFIG.apiTokenRequired ? "Bearer token enabled" : "Demo mode"}</strong>
+                                </div>
+                                <div className="meta-row">
+                                    <span>Upload limit</span>
+                                    <strong>{window.APP_CONFIG.maxUploadMb} MB</strong>
+                                </div>
+                                <div className="meta-row">
+                                    <span>Storage</span>
+                                    <strong>Raw note + JSON extraction</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div className="metric-grid">
+                        <div className="metric-card">
+                            <div className="metric-label">Patients</div>
+                            <div className="metric-value">{dashboard?.overview?.patient_count ?? "--"}</div>
+                            <div className="metric-detail">Anonymized patient profiles being trended.</div>
+                        </div>
+                        <div className="metric-card">
+                            <div className="metric-label">Clinical Notes</div>
+                            <div className="metric-value">{dashboard?.overview?.note_count ?? "--"}</div>
+                            <div className="metric-detail">Stored note history powering the timeline view.</div>
+                        </div>
+                        <div className="metric-card">
+                            <div className="metric-label">Flagged Follow-ups</div>
+                            <div className="metric-value">{dashboard?.overview?.flagged_followups ?? "--"}</div>
+                            <div className="metric-detail">Notes with urgent or escalation-focused follow-up language.</div>
+                        </div>
+                        <div className="metric-card">
+                            <div className="metric-label">Top Diagnosis</div>
+                            <div className="metric-value">{topDiagnoses[0]?.label || "--"}</div>
+                            <div className="metric-detail">
+                                {topDiagnoses[0] ? `${topDiagnoses[0].count} extracted note${topDiagnoses[0].count === 1 ? "" : "s"}` : "Awaiting note data."}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid">
+                        <div className="stack">
+                            <section className="panel">
+                                <div className="section-kicker">Intake</div>
+                                <h2 className="section-title">Ingest a clinical note</h2>
+                                <p className="section-copy">
+                                    Paste free-text clinical documentation or upload a text note. The backend stores the raw note,
+                                    extracts structured JSON, and refreshes the patient timeline automatically.
+                                </p>
+
+                                <form onSubmit={handleSubmit}>
+                                    <label>
+                                        <span className="field-label">Anonymized Patient ID</span>
+                                        <input
+                                            value={form.patient_id}
+                                            onChange={(event) => setForm({ ...form, patient_id: event.target.value })}
+                                            placeholder="PT-3201"
+                                            required
+                                        />
+                                    </label>
+                                    <label>
+                                        <span className="field-label">Encounter Date</span>
+                                        <input
+                                            type="date"
+                                            value={form.encountered_at}
+                                            onChange={(event) => setForm({ ...form, encountered_at: event.target.value })}
+                                        />
+                                    </label>
+                                    {window.APP_CONFIG.apiTokenRequired ? (
+                                        <label>
+                                            <span className="field-label">API Bearer Token</span>
+                                            <input
+                                                type="password"
+                                                value={form.api_token}
+                                                onChange={(event) => setForm({ ...form, api_token: event.target.value })}
+                                                placeholder="Bearer token"
+                                            />
+                                        </label>
+                                    ) : null}
+                                    <label>
+                                        <span className="field-label">Clinical Note Text</span>
+                                        <textarea
+                                            value={form.note_text}
+                                            onChange={(event) => setForm({ ...form, note_text: event.target.value })}
+                                            placeholder="Primary diagnosis: COPD exacerbation. Medications: albuterol inhaler..."
+                                        />
+                                    </label>
+                                    <label>
+                                        <span className="field-label">Or Upload a Text Note</span>
+                                        <div className="file-shell">
+                                            <span>{fileName || "Choose a .txt, .md, or plain-text export"}</span>
+                                            <input
+                                                type="file"
+                                                accept=".txt,.md,.text"
+                                                onChange={(event) => {
+                                                    const file = event.target.files?.[0] || null;
+                                                    setFileBlob(file);
+                                                    setFileName(file ? file.name : "");
+                                                }}
+                                            />
+                                        </div>
+                                    </label>
+                                    <div className="button-row">
+                                        <button className="primary-button" type="submit">Summarize & Store</button>
+                                        <button
+                                            className="secondary-button"
+                                            type="button"
+                                            onClick={() => {
+                                                setForm((current) => ({
+                                                    ...current,
+                                                    note_text: "Primary diagnosis: Hypertension follow-up. Symptoms include headache and fatigue. BP 142/88, HR 86, weight 74 kg. Prescribed medications: amlodipine 5 mg daily. Follow-up: PCP recheck in 2 weeks; keep a home blood pressure log.",
+                                                }));
+                                            }}
+                                        >
+                                            Load Example
+                                        </button>
+                                    </div>
+                                </form>
+
+                                {statusMessage ? (
+                                    <div className={`status-banner ${statusError ? "error" : ""}`}>{statusMessage}</div>
+                                ) : null}
+                            </section>
+
+                            <section className="panel">
+                                <div className="section-kicker">Patients</div>
+                                <h2 className="section-title">Tracked patient roster</h2>
+                                <p className="section-copy">Select a patient to inspect their diagnosis history, trends, and latest follow-up recommendations.</p>
+                                {loadingDashboard ? (
+                                    <div className="loading">Loading patient list...</div>
+                                ) : dashboard?.patients?.length ? (
+                                    <div className="patient-list">
+                                        {dashboard.patients.map((patient) => (
+                                            <button
+                                                key={patient.anonymized_id}
+                                                className={`patient-card ${selectedPatientId === patient.anonymized_id ? "active" : ""}`}
+                                                type="button"
+                                                onClick={() => setSelectedPatientId(patient.anonymized_id)}
+                                            >
+                                                <div className="patient-heading">
+                                                    <strong className="mono">{patient.anonymized_id}</strong>
+                                                    <span className="muted">{patient.note_count} notes</span>
+                                                </div>
+                                                <div>{patient.latest_diagnosis}</div>
+                                                <div className="muted" style={{ marginTop: "8px" }}>Last seen {formatDate(patient.last_seen)}</div>
+                                                {patient.latest_risk_flags?.length ? (
+                                                    <div className="pill-row" style={{ marginTop: "10px" }}>
+                                                        {patient.latest_risk_flags.map((flag) => (
+                                                            <span key={flag} className="pill alert">{flag}</span>
+                                                        ))}
+                                                    </div>
+                                                ) : null}
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="empty-state">No patient records yet. Submit a note to create the first timeline.</div>
+                                )}
+                            </section>
+                        </div>
+
+                        <div className="stack">
+                            <section className="panel">
+                                <div className="section-kicker">Extraction</div>
+                                <h2 className="section-title">Latest clinical snapshot</h2>
+                                <p className="section-copy">
+                                    Structured data pulled from the most recent note for the selected patient, ready for downstream review or charting.
+                                </p>
+                                {loadingTimeline ? (
+                                    <div className="loading">Loading patient timeline...</div>
+                                ) : latestPatient ? (
+                                    <>
+                                        <div className="pill-row">
+                                            <span className="pill mono">{latestPatient.anonymized_id}</span>
+                                            <span className="pill">{latestPatient.latest_diagnosis}</span>
+                                            {latestNote?.extraction_mode ? <span className="pill">Mode: {latestNote.extraction_mode}</span> : null}
+                                        </div>
+                                        <div className="detail-grid">
+                                            <div className="detail-card">
+                                                <h4>Medications</h4>
+                                                <ul>
+                                                    {(latestPatient.latest_medications || []).map((medication) => <li key={medication}>{medication}</li>)}
+                                                    {!latestPatient.latest_medications?.length ? <li>No medications extracted.</li> : null}
+                                                </ul>
+                                            </div>
+                                            <div className="detail-card">
+                                                <h4>Follow-up Actions</h4>
+                                                <ul>
+                                                    {(latestPatient.latest_follow_up || []).map((action) => <li key={action}>{action}</li>)}
+                                                    {!latestPatient.latest_follow_up?.length ? <li>No follow-up items extracted.</li> : null}
+                                                </ul>
+                                            </div>
+                                            <div className="detail-card">
+                                                <h4>Recent Vitals</h4>
+                                                <ul>
+                                                    <li>BP: {latestNote?.vital_signs?.blood_pressure_systolic ?? "--"}/{latestNote?.vital_signs?.blood_pressure_diastolic ?? "--"}</li>
+                                                    <li>HR: {latestNote?.vital_signs?.heart_rate ?? "--"} bpm</li>
+                                                    <li>SpO2: {latestNote?.vital_signs?.oxygen_saturation ?? "--"}%</li>
+                                                    <li>Weight: {latestNote?.vital_signs?.weight_kg ?? "--"} kg</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="empty-state">Choose a patient to view extracted data.</div>
+                                )}
+                            </section>
+
+                            <div className="two-up">
+                                <MetricChart
+                                    title="Vital sign trends"
+                                    labels={timeline?.trends?.labels || []}
+                                    datasets={bpHrDatasets}
+                                />
+                                <MetricChart
+                                    title="Symptom frequency"
+                                    type="bar"
+                                    labels={(timeline?.symptom_frequency || []).map((item) => item.label)}
+                                    datasets={symptomDatasets}
+                                />
+                            </div>
+
+                            <section className="panel">
+                                <div className="section-kicker">History</div>
+                                <h2 className="section-title">Recent note timeline</h2>
+                                <p className="section-copy">A chronological view of extracted diagnoses, interventions, and note previews for the selected patient.</p>
+                                {loadingTimeline ? (
+                                    <div className="loading">Refreshing note history...</div>
+                                ) : timeline?.notes?.length ? (
+                                    <div className="note-list">
+                                        {timeline.notes.map((note) => (
+                                            <div className="note-card" key={note.id}>
+                                                <div className="note-heading">
+                                                    <div>
+                                                        <strong>{note.primary_diagnosis || "Diagnosis unavailable"}</strong>
+                                                        <div className="muted" style={{ marginTop: "6px" }}>{formatDate(note.encountered_at)}</div>
+                                                    </div>
+                                                    <span className="pill">{note.source_filename || "Pasted note"}</span>
+                                                </div>
+                                                <div className="pill-row">
+                                                    {(note.prescribed_medications || []).slice(0, 3).map((medication) => (
+                                                        <span className="pill" key={medication}>{medication}</span>
+                                                    ))}
+                                                    {(note.risk_flags || []).map((flag) => (
+                                                        <span className="pill alert" key={flag}>{flag}</span>
+                                                    ))}
+                                                </div>
+                                                <p className="section-copy" style={{ marginTop: "12px" }}>{note.raw_note_preview}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="empty-state">No timeline data available yet.</div>
+                                )}
+                            </section>
+
+                            <section className="panel">
+                                <div className="section-kicker">Population</div>
+                                <h2 className="section-title">Recent note activity</h2>
+                                <p className="section-copy">A quick cross-patient view to support QA and demo storytelling during interviews.</p>
+                                {dashboard?.recent_notes?.length ? (
+                                    <div className="note-list">
+                                        {dashboard.recent_notes.map((note) => (
+                                            <div className="note-card" key={note.id}>
+                                                <div className="note-heading">
+                                                    <strong>{note.primary_diagnosis || "Diagnosis unavailable"}</strong>
+                                                    <span className="pill mono">{note.patient_id}</span>
+                                                </div>
+                                                <div className="muted">{formatDate(note.encountered_at)}</div>
+                                                <p className="section-copy" style={{ marginTop: "10px" }}>{note.raw_note_preview}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="empty-state">Recent note activity will appear here after ingestion.</div>
+                                )}
+                            </section>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+        {% endraw %}
+    </script>
+</body>
+</html>
